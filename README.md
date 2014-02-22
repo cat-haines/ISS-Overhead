@@ -1,12 +1,12 @@
 ISS-Overhead
 ============
 
-A simple project that turns an LED on when the ISS is overhead
+A simple project that displays when the ISS is overhead.
 
 TODO:
 =====
-
-- http endpoints to set lat/lon/alt
-- http endpoints to set blink speed
-- web interface to display pretty map from agent
-
+- Update code to use NeoPixels instead of a single LED
+- Add an http endpoints to:
+  - Set position of box (lat/long)
+  - Set color / pattern
+  - Reset in case of an error
