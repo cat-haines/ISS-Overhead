@@ -1,13 +1,13 @@
 ISSPassTimeBase <- "http://api.open-notify.org/iss-pass.json?";
 
-localLat <- YOUR_LAT
-localLon <- YOUR_LON
-localAlt <- YOUR_ALT
+localLat <- 37.3964745
+localLon <- -122.1046571
+localAlt <- 32;
 
-passStartWakeup <- null;
-passEndWakeup <- null;
+overhead <- false;
+passLoopWakeup <- null;
 
-function GetNextISSPassTime(latitude, longitude, altitude = 0, passes = 5) {
+function GetISSPassTime(latitude, longitude, altitude = 0, passes = 5) {
     local params = { lat = latitude, lon = longitude, alt = altitude, n = passes };
     local url = ISSPassTimeBase + http.urlencode(params);
 
@@ -24,27 +24,61 @@ function GetNextISSPassTime(latitude, longitude, altitude = 0, passes = 5) {
 }
 
 function passLoop() {
-    local nextPass = GetNextISSPassTime(localLat, localLon, localAlt, 1);
-    try {
-        if (!nextPass) throw "No information for next pass.";
+    local nextPass = GetISSPassTime(localLat, localLon, localAlt, 1);
+    
+    if(!nextPass) {
+        // if there was an error
+        passLoopWakeup = imp.wakeup(30, passLoop);
+        return;
+    }
+    if ("riseTime" in nextPass && "duration" in nextPass) {
+        // there was data 
         local timeToNextPass = nextPass.risetime - time();
         local duration = nextPass.duration;
-        
         server.log(format("ISS be overhead next in %is for %is", timeToNextPass, duration));
         
-        // cancel / overwrite any previous timers
-        if (passStartWakeup != null) imp.cancelwakeup(passStartWakeup);
-        if (passEndWakeup != null) imp.cancelwakeup(passEndWakeup);
-        passStartWakeup = imp.wakeup(timeToNextPass, function() { device.send("overhead", duration); });
-        passEndWakeup = imp.wakeup(timeToNextPass+duration+30, passLoop);
-    } catch(ex) { 
-        server.log("Error: " + ex);
-        device.send("error", null);
+        if(overhead) {
+            // if we think we're overhead, and get we a passtime
+            // then we're not overhead anymore
+            overhead = false;
+            device.send("notOverhead", null);
+        }
+        
+        if (timeToNextPass < 3600) {
+            // if pass is going to happen within an hour:
+            
+            // schedule device on
+            imp.wakeup(timeToNextPass-10, function() { 
+                overhead = true;
+                device.send("overhead", duration); 
+            });
+            // schedule device off
+            imp.wakeup(timeToNextPass+duration+10, function() { 
+                overhead = false;
+                device.send("notOverhead", null); 
+            });
+            // schedule get next pass
+            passLoopWakeup = imp.wakeup(timeToNextPass+duration+30, passLoop)
+        }
+        else {
+            // if pass is more than hour away, wake up in an hour and check
+            passLoopWakeup = imp.wakeup(3600, passLoop);
+        }
+    } else {
+        // there was no data (ISS is *currently* overhead)
+        if (!overhead) {
+            overhead = true;
+            device.send("overhead", null);
+            passLoopWakeup = imp.wakeup(30.0, passLoop);
+        }
     }
 } passLoop();
 
 function passLoopWatchDog() {
-    imp.wakeup(600, passLoopWatchDog);
-    if (passStartWakeup == null && passEndWakeup == null) passLoop();
+    // wakeup every 30 minutes to make sure things are fine
+    imp.wakeup(1500, passLoopWatchDog);
+    if (passLoopWakeup == null) {
+        server.log("restarted loop");
+        passLoop();
+    }
 } passLoopWatchDog();
-
