@@ -299,6 +299,19 @@ class NeoPixels {
         frame.writen(0x00,'c');
     }
     
+    function fillFrame(color) {
+        // Get the color string
+        local colorString = blob(BYTESPERPIXEL);
+
+        colorString.writestring(bits[color[1].tointeger()]);
+        colorString.writestring(bits[color[0].tointeger()]);
+        colorString.writestring(bits[color[2].tointeger()]);
+
+        frame.seek(0);
+        for (local p = 0; p < frameSize; p++) frame.writestring(colorString.tostring());
+        frame.writen(0x00,'c');
+    }
+    
     // writes the frame buffer to the pixel strip
     // ie - this function changes the pixel strip
     function writeFrame() {
@@ -390,7 +403,6 @@ function doOverhead() {
     } else {
         // if it's no longer overhead, fade to off
         fader.fadeTo([0,0,0], 1.0);
-        
         server.log("ISS is no longer overhead");
     }
 }
