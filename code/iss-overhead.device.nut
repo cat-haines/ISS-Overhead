@@ -2,7 +2,8 @@
 const BYTESPERPIXEL = 27;
 const BYTESPERCOLOR = 9; // BYTESPERPIXEL / 3
 const SPICLK = 7500; // SPI clock speed in kHz
-const NUMPIXELS = 8;
+const NUMPIXELS = 9;
+const FADETIME = 5.0;
 
 bits <- [
     "\xE0\x70\x38\x1C\x0E\x07\x03\x81\xC0",
@@ -393,17 +394,18 @@ spi <- hardware.spi257;
 spi.configure(MSB_FIRST, SPICLK);
 pixels <- NeoPixels(spi, NUMPIXELS);
 fader <- NeoPixelFader(pixels);
+fader.fadeTo([0,0,0], 0.5);
 
 overhead <- false;
 
 function doOverhead() {
     if (overhead) {
         //if the iss is overhead, fade to another color
-        fader.fadeTo([rnd(255), rnd(255), rnd(255)], 1.0, doOverhead);
+        fader.fadeTo([rnd(255), rnd(255), rnd(255)], FADETIME, doOverhead);
     } else {
         // if it's no longer overhead, fade to off
-        fader.fadeTo([0,0,0], 1.0);
-        server.log("ISS is no longer overhead");
+        fader.fadeTo([0,0,0], 2.0);
+        //server.log("ISS is no longer overhead");
     }
 }
 
@@ -421,3 +423,5 @@ agent.on("overhead", function(t) {
 agent.on("notOverhead", function(t) {
     overhead = false;
 });
+
+server.log("Device Started");
