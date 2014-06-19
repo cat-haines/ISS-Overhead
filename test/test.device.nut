@@ -2,7 +2,7 @@
 const BYTESPERPIXEL = 27;
 const BYTESPERCOLOR = 9; // BYTESPERPIXEL / 3
 const SPICLK = 7500; // SPI clock speed in kHz
-const NUMPIXELS = 8;
+const NUMPIXELS = 9;
 
 bits <- [
     "\xE0\x70\x38\x1C\x0E\x07\x03\x81\xC0",
